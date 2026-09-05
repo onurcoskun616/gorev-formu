@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Görev Formu Oluşturucu</title>
+<meta name="description" content="Çırak öğrenciler için öğretmen görev formunu Excel/CSV verisinden işletme başına otomatik üreten yazdırılabilir araç">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Görev Formu">
+<style>
+:root{
+  --bg:#f2f1ee;
+  --panel-bg:#ffffff;
+  --text:#1c1917;
+  --text-dim:#68625c;
+  --border:#e2ddd6;
+  --accent:#1d4ed8;
+  --accent-fg:#ffffff;
+  --input-bg:#ffffff;
+  --input-border:#cbc5bd;
+  --danger:#b91c1c;
+  --chip-bg:#eef2ff;
+  --chip-text:#1d4ed8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#18181b;
+    --panel-bg:#232326;
+    --text:#e8e6e3;
+    --text-dim:#a19c95;
+    --border:#38383c;
+    --accent:#5b8bff;
+    --accent-fg:#0b1020;
+    --input-bg:#1b1b1e;
+    --input-border:#46454a;
+    --danger:#f87171;
+    --chip-bg:#1e2a52;
+    --chip-text:#a9c1ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#18181b;
+  --panel-bg:#232326;
+  --text:#e8e6e3;
+  --text-dim:#a19c95;
+  --border:#38383c;
+  --accent:#5b8bff;
+  --accent-fg:#0b1020;
+  --input-bg:#1b1b1e;
+  --input-border:#46454a;
+  --danger:#f87171;
+  --chip-bg:#1e2a52;
+  --chip-text:#a9c1ff;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+h1,h2,h3{margin:0 0 6px 0;}
+button{font-family:inherit;cursor:pointer;}
+input,select{font-family:inherit;}
+
+#app{display:flex;min-height:100vh;}
+
+/* ---------- Sidebar / control panel ---------- */
+#panel{
+  width:340px;flex:0 0 340px;background:var(--panel-bg);border-right:1px solid var(--border);
+  padding:18px 16px 40px;overflow-y:auto;height:100vh;position:sticky;top:0;
+}
+#panel h1{font-size:16px;}
+#panel .sub{color:var(--text-dim);font-size:12.5px;margin-bottom:18px;}
+.section{margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+.section:last-child{border-bottom:none;}
+.section h2{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim);font-weight:700;}
+.field{margin-bottom:10px;}
+.field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:3px;}
+.field input[type=text],.field input[type=number]{
+  width:100%;padding:6px 8px;border:1px solid var(--input-border);border-radius:6px;
+  background:var(--input-bg);color:var(--text);font-size:13px;
+}
+.filebtn{
+  display:block;width:100%;padding:9px 10px;border:1.5px dashed var(--input-border);border-radius:8px;
+  text-align:center;font-size:12.5px;color:var(--text-dim);background:var(--input-bg);
+}
+.filebtn:hover{border-color:var(--accent);color:var(--accent);}
+.filebtn input{display:none;}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px 12px;border-radius:7px;border:1px solid var(--input-border);
+  background:var(--input-bg);color:var(--text);font-size:12.5px;font-weight:600;width:100%;
+}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent;}
+.btn+.btn{margin-top:8px;}
+.hint{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-top:6px;}
+.cols-box{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;
+  font-size:11px;color:var(--text-dim);line-height:1.7;
+}
+.cols-box b{color:var(--text);}
+.stat{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;}
+.stat b{color:var(--text);}
+.err{background:#fee2e2;color:#991b1b;border-radius:6px;padding:8px 10px;font-size:12px;margin-top:8px;}
+:root[data-theme="dark"] .err,@media (prefers-color-scheme:dark){.err{background:#3b1616;color:#fca5a5;}}
+.isletme-list{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+.isletme-row{display:flex;justify-content:space-between;gap:8px;padding:6px 9px;font-size:12px;border-bottom:1px solid var(--border);}
+.isletme-row:last-child{border-bottom:none;}
+.isletme-row .n{color:var(--text-dim);flex:0 0 auto;}
+.zoomrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);}
+.zoomrow input[type=range]{flex:1;}
+.savebadge{font-size:11px;color:var(--text-dim);margin-top:6px;display:flex;align-items:center;gap:5px;}
+.savebadge .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;flex:0 0 auto;}
+#installBtn{display:none;}
+#iosHint{display:none;font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+
+/* ---------- Data table editor ---------- */
+#dataTableWrap{max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+table.dataeditor{border-collapse:collapse;width:100%;font-size:11px;}
+table.dataeditor th{position:sticky;top:0;background:var(--panel-bg);border-bottom:1px solid var(--border);padding:5px 4px;text-align:left;color:var(--text-dim);font-weight:600;white-space:nowrap;}
+table.dataeditor td{border-bottom:1px solid var(--border);padding:2px;}
+table.dataeditor input{width:100%;min-width:70px;border:1px solid transparent;background:transparent;color:var(--text);padding:3px 4px;border-radius:4px;font-size:11px;}
+table.dataeditor input:focus{border-color:var(--accent);background:var(--input-bg);outline:none;}
+table.dataeditor td.delcell{width:22px;text-align:center;}
+table.dataeditor td.delcell button{border:none;background:transparent;color:var(--text-dim);font-size:13px;padding:2px;}
+table.dataeditor td.delcell button:hover{color:var(--danger);}
+
+/* ---------- Main / preview area ---------- */
+#main{flex:1;padding:26px 26px 80px;overflow-x:auto;}
+#previewToolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:16px;flex-wrap:wrap;}
+#previewToolbar .info{font-size:12.5px;color:var(--text-dim);}
+#pagesRoot{display:flex;flex-direction:column;align-items:flex-start;gap:26px;}
+
+/* A4 landscape usable area (297mm x 210mm minus original margins T0 R0.46in B0.2in L0.39in) */
+.page{
+  width:275.4mm;height:204.5mm;
+  background:#ffffff;color:#000000;
+  box-shadow:0 1px 4px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.06);
+  position:relative;overflow:hidden;flex:0 0 auto;
+  transform-origin:top left;
+}
+.page-header{
+  text-align:center;font-family:"Times New Roman",Times,serif;font-weight:700;
+  line-height:1.28;padding-top:1.5mm;
+}
+.page-header .l1{font-size:12.5pt;}
+.page-header .l2{font-size:11.5pt;}
+.page-header .l3{font-size:11.5pt;}
+.page-inner{padding-top:1mm;}
+table.form-table{
+  border-collapse:collapse;table-layout:fixed;width:100%;
+  font-family:"Times New Roman",Times,serif;color:#000;
+}
+table.form-table td{
+  border:0.5pt solid #000;
+  vertical-align:middle;
+  padding:var(--cell-pad,1.2pt) 2.5pt;
+  font-size:var(--tbl-fs,10pt);
+  overflow:hidden;
+}
+table.form-table td.center{text-align:center;}
+table.form-table td.left{text-align:left;}
+table.form-table td.bold{font-weight:700;}
+table.form-table td.title{background:#f2f2f2;}
+table.form-table td.small{font-size:calc(var(--tbl-fs,10pt) - 1pt);}
+table.form-table td.checkbox{font-size:calc(var(--tbl-fs,10pt) - 0.5pt);}
+table.form-table td.note{font-size:calc(var(--tbl-fs,10pt) - 1pt);vertical-align:top;height:15mm;}
+table.form-table td.esaslar{
+  vertical-align:top;font-size:var(--esaslar-fs,8pt);padding:2pt 4pt;line-height:1.28;
+}
+.esaslar-title{font-weight:700;text-align:center;font-size:calc(var(--esaslar-fs,8pt) + 1.5pt);margin-bottom:3pt;}
+.esaslar-item{font-weight:700;text-align:justify;margin-bottom:2pt;}
+.esaslar-sub{font-weight:700;text-align:justify;margin:0 0 2pt 10pt;}
+.esaslar-sub2{margin:0 0 2pt 10pt;}
+.esaslar-subtitle{font-weight:700;text-align:center;margin:5pt 0 3pt;}
+.esaslar-colhead{text-align:center;font-weight:700;margin-bottom:2pt;}
+.esaslar-work{font-weight:700;margin-bottom:1.5pt;}
+.incelenmis{vertical-align:top;padding-top:2pt;}
+.incelenmis-title{text-align:center;font-weight:700;margin-bottom:3mm;}
+.incelenmis-row{display:flex;justify-content:space-around;text-align:center;}
+.inc-col{width:46%;}
+.inc-name{margin-top:5mm;font-weight:700;}
+.inc-role{font-weight:700;margin-top:0.5mm;}
+
+/* on-screen zoom (never affects print) */
+.page{transform:scale(var(--preview-zoom,0.6));margin-bottom:calc(-204.5mm * (1 - var(--preview-zoom,0.6)));margin-right:calc(-275.4mm * (1 - var(--preview-zoom,0.6)));}
+
+.empty-state{
+  border:1.5px dashed var(--border);border-radius:12px;padding:60px 30px;text-align:center;
+  color:var(--text-dim);width:100%;max-width:640px;
+}
+.empty-state h3{color:var(--text);font-size:15px;}
+
+@media (max-width:900px){
+  #app{flex-direction:column;}
+  #panel{width:100%;flex:none;height:auto;position:relative;border-right:none;border-bottom:1px solid var(--border);}
+}
+
+@media print{
+  #panel,#previewToolbar,.no-print{display:none !important;}
+  #main{padding:0;overflow:visible;}
+  #app{display:block;}
+  #pagesRoot{gap:0;display:block;}
+  .page{
+    transform:none !important;margin:0 !important;box-shadow:none;
+    page-break-after:always;overflow:hidden;
+  }
+  .page:last-child{page-break-after:auto;}
+  @page{size:A4 landscape;margin:0mm 11.68mm 5.08mm 9.91mm;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="panel">
+    <h1>Görev Formu Oluşturucu</h1>
+    <div class="sub">Çırak öğrenciler için öğretmen görev formu — Excel/CSV verisinden işletme başına otomatik sayfa üretir.</div>
+
+    <div class="section">
+      <h2>1. Üst Bilgiler</h2>
+      <div class="field">
+        <label>Okul / Kurum Adı</label>
+        <input type="text" id="fOkul" value="HACI ŞAMİL ŞAYİR MESLEKİ EĞİTİM MERKEZİ MÜDÜRLÜĞÜ">
+      </div>
+      <div class="field">
+        <label>Form Başlığı</label>
+        <input type="text" id="fBaslik" value="ÇIRAK ÖĞRENCİLER İÇİN ÖĞRETMEN GÖREV FORMU">
+      </div>
+      <div class="field">
+        <label>Dönem / Tarih Aralığı</label>
+        <input type="text" id="fDonem" value="16-27 MART 2026">
+      </div>
+      <div class="field">
+        <label>İmza satırındaki yıl (….. / ….. / ____)</label>
+        <input type="text" id="fYil" value="2026">
+      </div>
+      <div class="field">
+        <label>Öğrenci tablosu son sütun başlığı</label>
+        <input type="text" id="fAciklamaBaslik" value="Açıklama">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>2. Veri Yükle</h2>
+      <label class="filebtn">
+        📄 Excel (.xlsx/.xls) veya CSV yükle
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      </label>
+      <div class="cols-box">
+        <b>Beklenen sütunlar</b> (başlık isimleri esnek eşlenir):<br>
+        İşletme · Dal · İşyeri Adresi · İşyeri Tel · Usta Öğretici · Ad Soyad · Sınıf · Şube · Öğr.No · Devamsızlık · Öğretmen
+      </div>
+      <div class="hint">Aynı İşletme adına sahip satırlar otomatik gruplanır. Meslek Alanı, adres, telefon, usta öğretici ve öğretmen alanlarında bir işletme için birden fazla farklı değer varsa <b>en sık geçen</b> kullanılır.</div>
+      <div id="fileErr"></div>
+    </div>
+
+    <div class="section">
+      <h2>3. Ayarlar</h2>
+      <div class="field">
+        <label>Öğrenci tablosunda minimum satır sayısı</label>
+        <input type="number" id="fMinRows" value="7" min="1" max="20">
+      </div>
+      <div class="hint" id="fitInfo">Yazı boyutu tüm sayfalarda aynı kalması için en kalabalık işletmeye göre otomatik küçültülür.</div>
+    </div>
+
+    <div class="section">
+      <h2>4. İşletmeler <span id="isletmeCount"></span></h2>
+      <div class="isletme-list" id="isletmeList"></div>
+    </div>
+
+    <div class="section">
+      <h2>5. Veri Tablosu (düzenlenebilir)</h2>
+      <div id="dataTableWrap"></div>
+      <button class="btn" id="addRowBtn" style="margin-top:8px;">+ Satır Ekle</button>
+      <button class="btn danger" id="clearBtn" style="margin-top:8px;">Verileri Temizle</button>
+      <div class="savebadge" id="saveBadge"><span class="dot"></span> <span>Değişiklikler bu cihazda otomatik kaydediliyor</span></div>
+    </div>
+
+    <div class="section">
+      <h2>6. Önizleme</h2>
+      <div class="zoomrow">
+        <span>Yakınlaştır</span>
+        <input type="range" id="zoomRange" min="0.3" max="1" step="0.05" value="0.6">
+      </div>
+    </div>
+
+    <button class="btn primary" id="printBtn">🖨 Yazdır / PDF Kaydet</button>
+    <button class="btn" id="installBtn">⬇️ Uygulamayı Yükle</button>
+    <div id="iosHint">📲 iPhone/iPad: Safari'de paylaş (⬆️) simgesine dokunun, ardından "Ana Ekrana Ekle"yi seçin.</div>
+
+  </div>
+
+  <div id="main">
+    <div id="previewToolbar">
+      <div class="info" id="toolbarInfo">Örnek veriyle önizleme gösteriliyor. Kendi verinizi yükleyince bu sayfalar değişecek.</div>
+    </div>
+    <div id="pagesRoot"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ================= Column layout (percentages, from original tblGrid) ================= */
+var COLW = [9.30,7.16,5.04,5.24,10.46,9.30,1.16,4.91,6.72,4.65,36.05];
+
+/* ================= Esaslar column: exact static text extracted from source docx ================= */
+var ESASLAR_HTML =
+  '<div class="esaslar-title">İŞLETMELERDE MESLEK EĞİTİMİ GÖREVİNİN YERİNE GETİRİLMESİNDE UYULACAK ESASLAR</div>' +
+  '<div class="esaslar-item">1- İşletmelerde yapılan pratik eğitim ile merkez/kurumda verilen teorik eğitimler birbirlerini tamamlayacak şekilde planlı olarak yürütülmesi, programlara uygunluğunun izlenmesi, ortaya çıkabilecek sorunların belirlenmesi, devam devamsızlık ve disiplin durumunun izlenmesi ve rehberlikte bulunulması, çıraklık eğitiminin daha yaygın ve etkin uygulanmasını sağlamak amacıyla işletmelerle iş birliği çalışmalarında göz önünde bulundurulacaktır.</div>' +
+  '<div class="esaslar-item">2- İşletmelerde meslekî eğitim çalışmalarında görevli öğretmenlerin çırak öğrencilere;</div>' +
+  '<div class="esaslar-sub">a) İş yerindeki yanlış, eksik davranış ve çalışmaların düzeltilmesi,</div>' +
+  '<div class="esaslar-sub">b) İş güvenliği kurallarına göre çalışılması,</div>' +
+  '<div class="esaslar-sub">c) Resmi ve sipariş şartlarına uygun olarak işlerin yapılması, konularında rehberlik yapılacaktır.</div>' +
+  '<div class="esaslar-item">3- Pratik eğitim konularında usta öğreticilerle gerekli iş birliği ve rehberlik yapılacaktır.</div>' +
+  '<div class="esaslar-item">4- Çırak öğrencilerin yetiştirilmesinde iş yeri sahibi veya usta öğreticilerin önerileri alınacaktır.</div>' +
+  '<div class="esaslar-item">5- İş yeri çalışma düzenini olumsuz etkileyecek davranışlarda bulunmamaya özen gösterilecektir.</div>' +
+  '<div class="esaslar-item">6- İl Meslekî Eğitim Kurulunun tespit ettiği esaslara uyulacaktır.</div>' +
+  '<div class="esaslar-subtitle">İŞLETMELERDE MESLEK EĞİTİMİ GÖREVİNDE YAPILACAK ÇALIŞMALAR</div>' +
+  '<div class="esaslar-colhead">Çalışma Konuları &nbsp;&nbsp;&nbsp; Çalışma Dönemi</div>' +
+  '<div class="esaslar-work">1- Pratik eğitim programa hakkında bilgilendirme.......................... Ekim-Kasım Ayı</div>' +
+  '<div class="esaslar-work">2- Çalışma takvimi hakkında bilgilendirme ................................................. Ekim Ayı</div>' +
+  '<div class="esaslar-work">3- İş yeri sahibine öğrenci ile ilgili bilgi alacağı Md.Yrd. ve Öğretmeni hakkında bilgilendirme .................................................................................. … Ekim Ayı</div>' +
+  '<div class="esaslar-work">4- Okuldaki tören ve kutlamalara öğrencilerin katılımı hakkında bilgilendirme sürekli</div>' +
+  '<div class="esaslar-work">5- Kalfalık-Ustalık sınav tarihleri ve müracaatları hakkında bilgilendirme .....Sürekli</div>' +
+  '<div class="esaslar-work">6- Pratik Eğitimi Değerlendirme Formu hakkında bilgilendirme ................... Mayıs</div>' +
+  '<div class="esaslar-work">7- Öğrenci kayıt tarihleri hakkında bilgilendirme .........................................Sürekli</div>' +
+  '<div class="esaslar-work">8- Pratik eğitim aylık devam çizelgesi hakkında bilgilendirme ......................Sürekli</div>' +
+  '<div class="esaslar-work">9- Ustalık eğitim kurslara hakkında bilgilendirme .........................................Sürekli</div>' +
+  '<div class="esaslar-work">10- Usta öğretici kursları hakkında bilgilendirme ..........................................Sürekli</div>' +
+  '<div class="esaslar-work">11- Öğrencinin teorik eğitime devam-devamsızlığı hakkında bilgilendirme Sürekli</div>' +
+  '<div class="esaslar-work">12- İş Sağlığı ve Güvenliği (İSG) hakkında bilgilendirme ............................ Sürekli</div>';
+
+/* ================= Demo data (matches original ARSLAN MAKİNA örneği) ================= */
+var DEMO_ROWS = [
+  {isletme:"ARSLAN MAKİNA DÖKÜMSAN.VE TİC.LTD.ŞTİ.", dal:"Makine Teknolojisi", adres:"DELİKLİ KAYA MAH. ELMADAĞ CADDESİ NO:16", tel:"", usta:"Oğuzkaan ORAK", ad:"Bilal Efe GÜN", sinif:"12", sube:"C", no:"5784", aciklama:"", ogretmen:"ERAY ŞEKER"},
+  {isletme:"ARSLAN MAKİNA DÖKÜMSAN.VE TİC.LTD.ŞTİ.", dal:"Makine Teknolojisi", adres:"DELİKLİ KAYA MAH. ELMADAĞ CADDESİ NO:16", tel:"", usta:"Oğuzkaan ORAK", ad:"Burak AKTAŞ", sinif:"11", sube:"C", no:"4572", aciklama:"", ogretmen:"ERAY ŞEKER"},
+  {isletme:"ARSLAN MAKİNA DÖKÜMSAN.VE TİC.LTD.ŞTİ.", dal:"Makine Teknolojisi", adres:"DELİKLİ KAYA MAH. ELMADAĞ CADDESİ NO:16", tel:"", usta:"Oğuzkaan ORAK", ad:"Eren KANDEMİR", sinif:"12", sube:"C", no:"1230", aciklama:"", ogretmen:"ERAY ŞEKER"},
+  {isletme:"ARSLAN MAKİNA DÖKÜMSAN.VE TİC.LTD.ŞTİ.", dal:"Makine Teknolojisi", adres:"DELİKLİ KAYA MAH. ELMADAĞ CADDESİ NO:16", tel:"", usta:"Oğuzkaan ORAK", ad:"İsa KAROĞLU", sinif:"12", sube:"C", no:"6142", aciklama:"", ogretmen:"ERAY ŞEKER"},
+  {isletme:"ARSLAN MAKİNA DÖKÜMSAN.VE TİC.LTD.ŞTİ.", dal:"Makine Teknolojisi", adres:"DELİKLİ KAYA MAH. ELMADAĞ CADDESİ NO:16", tel:"", usta:"Oğuzkaan ORAK", ad:"Yusuf SUBAŞI", sinif:"12", sube:"C", no:"7524", aciklama:"", ogretmen:"ERAY ŞEKER"},
+  {isletme:"ARSLAN MAKİNA DÖKÜMSAN.VE TİC.LTD.ŞTİ.", dal:"Makine Teknolojisi", adres:"DELİKLİ KAYA MAH. ELMADAĞ CADDESİ NO:16", tel:"", usta:"Oğuzkaan ORAK", ad:"Şükrü AKMAZ", sinif:"12", sube:"K", no:"8745", aciklama:"", ogretmen:"ERAY ŞEKER"},
+  {isletme:"ARSLAN MAKİNA DÖKÜMSAN.VE TİC.LTD.ŞTİ.", dal:"Makine Teknolojisi", adres:"DELİKLİ KAYA MAH. ELMADAĞ CADDESİ NO:16", tel:"", usta:"Oğuzkaan ORAK", ad:"Kayra Sezer GÜRBÜZ", sinif:"9", sube:"C", no:"7419", aciklama:"", ogretmen:"ERAY ŞEKER"}
+];
+
+var FIELDS = [
+  {key:"isletme", label:"İşletme"},
+  {key:"dal", label:"Dal"},
+  {key:"adres", label:"İşyeri Adresi"},
+  {key:"tel", label:"İşyeri Tel"},
+  {key:"usta", label:"Usta Öğretici"},
+  {key:"ad", label:"Ad Soyad"},
+  {key:"sinif", label:"Sınıf"},
+  {key:"sube", label:"Şube"},
+  {key:"no", label:"Öğr.No"},
+  {key:"aciklama", label:"Devamsızlık"},
+  {key:"ogretmen", label:"Öğretmen"}
+];
+
+var HEADER_ALIASES = {
+  isletme: ["isletme","işletme","işletmeadı","firma","firmaadı","işyeri","işyeriadı"],
+  dal: ["dal","meslekalanı","alan","meslekalan"],
+  adres: ["işyeriadresi","adres","isyeriadresi","işletmeadresi"],
+  tel: ["işyeritel","telefon","tel","işyeritelefon","işletmetel"],
+  usta: ["ustaöğretici","ustaogretici","ustaöğreticisi","ustaöğreticiadı"],
+  ad: ["adsoyad","öğrenciadsoyad","adısoyadı","öğrenciadısoyadı","öğrenciadi soyadi"],
+  sinif: ["sınıf","sinif","sınıfı"],
+  sube: ["şube","sube","şubesi"],
+  no: ["öğrno","okulno","öğrenciNo","no","öğrenci no","öğr.no"],
+  aciklama: ["devamsızlık","açıklama","aciklama","devamsizlik"],
+  ogretmen: ["öğretmen","koordinatoröğretmen","meslekdersiöğretmeni","koordinatör"]
+};
+
+/* ================= Local persistence (bu cihazda) ================= */
+var STORAGE_KEY = "gorevFormuApp.v1";
+function loadSaved(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+function saveState(){
+  try{
+    var header = currentHeader();
+    header.minRows = document.getElementById("fMinRows").value;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({rows: state.rows, header: header, isDemo: state.isDemo}));
+  }catch(e){ /* localStorage yoksa sessizce geç */ }
+}
+
+var saved = null;
+try{ saved = loadSaved(); }catch(e){}
+
+/* ================= State ================= */
+var state = {
+  rows: (saved && saved.rows && saved.rows.length) ? saved.rows : DEMO_ROWS.map(function(r){return Object.assign({},r);}),
+  isDemo: saved ? !!saved.isDemo : true
+};
+
+/* ================= Helpers ================= */
+function esc(s){
+  return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function norm(s){
+  return String(s||"").toLowerCase()
+    .replace(/ı/g,"i").replace(/İ/g,"i").replace(/ş/g,"s").replace(/ğ/g,"g")
+    .replace(/ü/g,"u").replace(/ö/g,"o").replace(/ç/g,"c")
+    .replace(/[^a-z0-9]/g,"");
+}
+function mostFrequent(arr){
+  var counts = {}, order = [];
+  arr.forEach(function(v){
+    v = String(v||"").trim();
+    if(!v) return;
+    if(!(v in counts)){counts[v]=0; order.push(v);}
+    counts[v]++;
+  });
+  if(!order.length) return "";
+  order.sort(function(a,b){return counts[b]-counts[a];});
+  return order[0];
+}
+
+function mapHeaders(headerRow){
+  var map = {}; // colIndex -> fieldKey
+  headerRow.forEach(function(h, idx){
+    var n = norm(h);
+    if(!n) return;
+    for(var key in HEADER_ALIASES){
+      var aliases = HEADER_ALIASES[key];
+      for(var i=0;i<aliases.length;i++){
+        if(norm(aliases[i])===n){ map[idx]=key; return; }
+      }
+    }
+  });
+  return map;
+}
+
+function rowsFromAOA(aoa){
+  if(!aoa.length) return [];
+  var headerMap = mapHeaders(aoa[0]);
+  var out = [];
+  for(var r=1;r<aoa.length;r++){
+    var row = aoa[r];
+    if(!row || row.every(function(c){return c===undefined||c===null||String(c).trim()==="";})) continue;
+    var obj = {isletme:"",dal:"",adres:"",tel:"",usta:"",ad:"",sinif:"",sube:"",no:"",aciklama:"",ogretmen:""};
+    Object.keys(headerMap).forEach(function(idx){
+      obj[headerMap[idx]] = row[idx]==null? "": String(row[idx]).trim();
+    });
+    if(obj.isletme || obj.ad) out.push(obj);
+  }
+  return out;
+}
+
+function parseCSV(text){
+  var rows = [], row = [], field = "", inQuotes = false;
+  for(var i=0;i<text.length;i++){
+    var c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ',' || c === ';'){ row.push(field); field=""; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=""; }
+      else if(c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* ================= Grouping ================= */
+function groupData(rows){
+  var order = [], groups = {};
+  rows.forEach(function(r){
+    var key = (r.isletme||"").trim() || "(İşletme adı boş)";
+    if(!groups[key]){ groups[key]=[]; order.push(key); }
+    groups[key].push(r);
+  });
+  return order.map(function(key){
+    var g = groups[key];
+    return {
+      isletme: key,
+      meslekAlani: mostFrequent(g.map(function(r){return r.dal;})),
+      adres: mostFrequent(g.map(function(r){return r.adres;})),
+      tel: mostFrequent(g.map(function(r){return r.tel;})),
+      usta: mostFrequent(g.map(function(r){return r.usta;})),
+      ogretmen: mostFrequent(g.map(function(r){return r.ogretmen;})),
+      students: g.map(function(r){return {ad:r.ad,sinif:r.sinif,sube:r.sube,no:r.no,aciklama:r.aciklama};})
+    };
+  });
+}
+
+/* ================= Page building ================= */
+function buildStudentRows(students, minRows){
+  var n = Math.max(minRows, students.length);
+  var html = "";
+  for(var i=0;i<n;i++){
+    var s = students[i] || {};
+    var nb = function(v){ v = esc(v); return v===""? "&nbsp;" : v; };
+    html += '<tr>'+
+      '<td class="left" colspan="2">'+nb(s.ad)+'</td>'+
+      '<td class="center">'+nb(s.sinif)+'</td>'+
+      '<td class="center">'+nb(s.sube)+'</td>'+
+      '<td class="center">'+nb(s.no)+'</td>'+
+      '<td class="left small" colspan="5">'+nb(s.aciklama)+'</td>'+
+      '</tr>';
+  }
+  return {html:html, n:n};
+}
+
+function buildColgroup(){
+  return '<colgroup>'+COLW.map(function(w){return '<col style="width:'+w+'%">';}).join('')+'</colgroup>';
+}
+
+function buildPage(group, header, minRows){
+  var sr = buildStudentRows(group.students, minRows);
+  var totalRows = 17 + sr.n;
+  var acikBaslik = esc(header.aciklamaBaslik || "Açıklama");
+  return '' +
+  '<div class="page">' +
+    '<div class="page-header">' +
+      '<div class="l1">'+esc(header.okul)+'</div>' +
+      '<div class="l2">'+esc(header.baslik)+' ( '+esc(header.donem)+' )</div>' +
+    '</div>' +
+    '<div class="page-inner">' +
+    '<table class="form-table">' +
+      buildColgroup() +
+      '<tbody>' +
+        '<tr>' +
+          '<td class="bold center" colspan="2" rowspan="3">'+esc(group.isletme)+'</td>' +
+          '<td class="center" colspan="2">Meslek Alanı</td>' +
+          '<td class="bold left" colspan="6">'+esc(group.meslekAlani)+'</td>' +
+          '<td class="esaslar" rowspan="'+totalRows+'">'+ESASLAR_HTML+'</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td class="center" colspan="2">Adresi</td>' +
+          '<td class="left" colspan="6">'+esc(group.adres)+'</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td class="center" colspan="2">Telefon No</td>' +
+          '<td class="center">'+esc(group.tel)+'</td>' +
+          '<td class="center" colspan="2">Faks No</td>' +
+          '<td class="center" colspan="3">&nbsp;</td>' +
+        '</tr>' +
+        '<tr><td class="bold center title" colspan="10">İşverenin / Pratik Eğitimden Sorumlu Usta Öğreticinin</td></tr>' +
+        '<tr>' +
+          '<td class="center">Adı, Soyadı</td>' +
+          '<td class="center" colspan="3">'+esc(group.usta)+'</td>' +
+          '<td class="center" colspan="3">İmza ve Kaşesi</td>' +
+          '<td colspan="3">&nbsp;</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td class="center">Unvanı</td>' +
+          '<td class="center" colspan="3">Usta Öğretici</td>' +
+          '<td colspan="3">&nbsp;</td>' +
+          '<td colspan="3">&nbsp;</td>' +
+        '</tr>' +
+        '<tr><td class="bold center title" colspan="10">Öğrencinin</td></tr>' +
+        '<tr>' +
+          '<td class="bold center" colspan="2">Adı, Soyadı</td>' +
+          '<td class="bold center" colspan="2">Sınıfı</td>' +
+          '<td class="bold center">Okul No</td>' +
+          '<td class="bold center" colspan="5">'+acikBaslik+'</td>' +
+        '</tr>' +
+        sr.html +
+        '<tr>' +
+          '<td class="center" colspan="2" rowspan="2">İş Yerinde Çalışan Çırak Sayısı</td>' +
+          '<td class="center" colspan="2">Sözleşmeli</td>' +
+          '<td class="center">Sözleşmesiz</td>' +
+          '<td colspan="5" rowspan="2">&nbsp;</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td colspan="2">&nbsp;</td>' +
+          '<td>&nbsp;</td>' +
+        '</tr>' +
+        '<tr><td class="bold center title" colspan="10">İş Yeri ve Öğrenci Hakkındaki Bilgiler (İlgili Kutuyu İşaretleyin)</td></tr>' +
+        '<tr>' +
+          '<td class="checkbox" colspan="5">☐ Öğrenci pratik eğitimini sürdürmektedir</td>' +
+          '<td class="checkbox" colspan="5">☐ İş yeri adresi değişmiştir</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td class="checkbox" colspan="5">☐ Öğrenci işyerinden ayrılmıştır</td>' +
+          '<td class="checkbox" colspan="5">☐ İş yeri şu anda kapalıdır</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td class="checkbox" colspan="5">☐ İşveren olmadığı için imza ve görüş alınmadı</td>' +
+          '<td class="checkbox" colspan="5">☐ Diğer hususlar</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td class="note" colspan="5">Pratik eğitimin konusu ile İş Sağlığı ve Güvenliği (İSG) konularındaki öğretmenin görüş ve gözlemleri:</td>' +
+          '<td class="note" colspan="5">Usta öğreticinin görüş, gözlem ve önerileri<br>Varsa (Buraya yazınız):&nbsp;&nbsp;&nbsp;☐ Var&nbsp;&nbsp;&nbsp;☐ Yok</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td colspan="5">İş yerinde İşletmedeki Mesleki Eğitim Çalışmalarına</td>' +
+          '<td class="center">Başlama Saati</td>' +
+          '<td colspan="2">&nbsp;</td>' +
+          '<td class="center">Bitiş Saati</td>' +
+          '<td>&nbsp;</td>' +
+        '</tr>' +
+        '<tr>' +
+          '<td class="incelenmis" colspan="10">' +
+            '<div class="incelenmis-title">İncelenmiştir</div>' +
+            '<div class="incelenmis-row">' +
+              '<div class="inc-col">' +
+                '<div>….. / ….. / '+esc(header.yil)+'</div>' +
+                '<div class="inc-name">'+esc(group.ogretmen)+'</div>' +
+                '<div class="inc-role">Meslek Dersi (Koordinatör) Öğretmeni</div>' +
+              '</div>' +
+              '<div class="inc-col">' +
+                '<div>……. / ……. / ………….</div>' +
+                '<div class="inc-name">&nbsp;</div>' +
+                '<div class="inc-role">Koordinatör Müdür Yrd.</div>' +
+              '</div>' +
+            '</div>' +
+          '</td>' +
+        '</tr>' +
+      '</tbody>' +
+    '</table>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ================= Auto-fit font size (uniform across all pages) ================= */
+var TARGET_H_MM = 204.5; // usable page height
+
+function autoFitFontSize(groups, header, minRows){
+  var maxN = Math.max.apply(null, groups.map(function(g){return Math.max(minRows, g.students.length);}).concat([minRows]));
+  var testGroup = {
+    isletme:"TEST", meslekAlani:"TEST", adres:"TEST", tel:"", usta:"TEST", ogretmen:"TEST",
+    students: new Array(maxN).fill({ad:"Test Öğrenci Adı Soyadı",sinif:"12",sube:"C",no:"0000",aciklama:""})
+  };
+  var probe = document.createElement("div");
+  probe.style.position="absolute"; probe.style.visibility="hidden"; probe.style.left="-9999px"; probe.style.top="0";
+  probe.className = "page";
+  probe.style.transform = "none";
+  probe.innerHTML = buildPage(testGroup, header, minRows).replace(/^<div class="page">/,'').replace(/<\/div>$/,'');
+  document.body.appendChild(probe);
+
+  var fsPt = 10, esaFs = 8, pad = 1.2;
+  var headerEl = probe.querySelector(".page-header");
+  var pageInner = probe.querySelector(".page-inner");
+  var root = document.documentElement;
+  var headerMm = headerEl.getBoundingClientRect().height / (96/25.4);
+  var availMm = TARGET_H_MM - headerMm - 1;
+
+  for(var i=0;i<50;i++){
+    root.style.setProperty("--tbl-fs", fsPt+"pt");
+    root.style.setProperty("--esaslar-fs", esaFs+"pt");
+    root.style.setProperty("--cell-pad", pad+"pt");
+    var h = pageInner.getBoundingClientRect().height / (96/25.4);
+    if(h <= availMm || fsPt <= 6.0) break;
+    fsPt -= 0.2;
+    esaFs -= 0.08;
+    pad = Math.max(0.2, pad - 0.05);
+  }
+  document.body.removeChild(probe);
+  return {fsPt:Math.round(fsPt*10)/10, esaFs:Math.round(esaFs*10)/10, n:maxN};
+}
+
+/* ================= Rendering ================= */
+function currentHeader(){
+  return {
+    okul: document.getElementById("fOkul").value,
+    baslik: document.getElementById("fBaslik").value,
+    donem: document.getElementById("fDonem").value,
+    yil: document.getElementById("fYil").value,
+    aciklamaBaslik: document.getElementById("fAciklamaBaslik").value
+  };
+}
+function currentMinRows(){
+  var v = parseInt(document.getElementById("fMinRows").value, 10);
+  return (isNaN(v) || v<1) ? 7 : v;
+}
+
+function render(){
+  var header = currentHeader();
+  var minRows = currentMinRows();
+  var groups = groupData(state.rows);
+
+  var fit = groups.length ? autoFitFontSize(groups, header, minRows) : {fsPt:10, esaFs:8, n:minRows};
+  document.getElementById("fitInfo").textContent =
+    "Yazı boyutu tüm sayfalarda "+fit.fsPt+"pt olarak ayarlandı (en kalabalık işletme: "+fit.n+" öğrenci satırı).";
+
+  var root = document.getElementById("pagesRoot");
+  if(!groups.length){
+    root.innerHTML = '<div class="empty-state"><h3>Henüz veri yok</h3><p>Sol paneldeki alandan bir Excel veya CSV dosyası yükleyin, ya da örnek veriyle devam edin.</p></div>';
+  } else {
+    root.innerHTML = groups.map(function(g){ return buildPage(g, header, minRows); }).join("");
+  }
+
+  document.getElementById("isletmeCount").textContent = groups.length ? "("+groups.length+")" : "";
+  var listEl = document.getElementById("isletmeList");
+  listEl.innerHTML = groups.map(function(g){
+    return '<div class="isletme-row"><span>'+esc(g.isletme)+'</span><span class="n">'+g.students.length+' öğr.</span></div>';
+  }).join("") || '<div class="isletme-row"><span style="color:var(--text-dim)">İşletme yok</span></div>';
+
+  document.getElementById("toolbarInfo").textContent = state.isDemo
+    ? "Örnek veriyle önizleme gösteriliyor. Kendi verinizi yükleyince bu sayfalar değişecek."
+    : (groups.length+" işletme, "+state.rows.length+" öğrenci satırı yüklendi — "+groups.length+" sayfa üretilecek.");
+
+  renderDataEditor();
+  saveState();
+}
+
+/* ================= Data editor table ================= */
+function renderDataEditor(){
+  var wrap = document.getElementById("dataTableWrap");
+  var thead = '<tr><th></th>'+FIELDS.map(function(f){return '<th>'+esc(f.label)+'</th>';}).join("")+'</tr>';
+  var body = state.rows.map(function(row, ri){
+    var cells = FIELDS.map(function(f){
+      return '<td><input type="text" data-ri="'+ri+'" data-key="'+f.key+'" value="'+esc(row[f.key])+'"></td>';
+    }).join("");
+    return '<tr><td class="delcell"><button data-del="'+ri+'" title="Satırı sil">🗑</button></td>'+cells+'</tr>';
+  }).join("");
+  wrap.innerHTML = '<table class="dataeditor"><thead>'+thead+'</thead><tbody>'+body+'</tbody></table>';
+
+  wrap.querySelectorAll("input").forEach(function(inp){
+    inp.addEventListener("input", function(){
+      var ri = parseInt(this.getAttribute("data-ri"),10);
+      var key = this.getAttribute("data-key");
+      state.rows[ri][key] = this.value;
+      state.isDemo = false;
+      renderPagesOnly();
+      saveState();
+    });
+  });
+  wrap.querySelectorAll("[data-del]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var ri = parseInt(this.getAttribute("data-del"),10);
+      state.rows.splice(ri,1);
+      state.isDemo = false;
+      render();
+    });
+  });
+}
+
+function renderPagesOnly(){
+  var header = currentHeader();
+  var minRows = currentMinRows();
+  var groups = groupData(state.rows);
+  var fit = groups.length ? autoFitFontSize(groups, header, minRows) : {fsPt:10, esaFs:8, n:minRows};
+  document.getElementById("fitInfo").textContent =
+    "Yazı boyutu tüm sayfalarda "+fit.fsPt+"pt olarak ayarlandı (en kalabalık işletme: "+fit.n+" öğrenci satırı).";
+  var root = document.getElementById("pagesRoot");
+  root.innerHTML = groups.length
+    ? groups.map(function(g){ return buildPage(g, header, minRows); }).join("")
+    : '<div class="empty-state"><h3>Henüz veri yok</h3><p>Sol paneldeki alandan bir Excel veya CSV dosyası yükleyin.</p></div>';
+  document.getElementById("isletmeCount").textContent = groups.length ? "("+groups.length+")" : "";
+  var listEl = document.getElementById("isletmeList");
+  listEl.innerHTML = groups.map(function(g){
+    return '<div class="isletme-row"><span>'+esc(g.isletme)+'</span><span class="n">'+g.students.length+' öğr.</span></div>';
+  }).join("") || '<div class="isletme-row"><span style="color:var(--text-dim)">İşletme yok</span></div>';
+  document.getElementById("toolbarInfo").textContent =
+    (groups.length+" işletme, "+state.rows.length+" öğrenci satırı — "+groups.length+" sayfa üretilecek.");
+  saveState();
+}
+
+/* ================= File handling ================= */
+document.getElementById("fileInput").addEventListener("change", function(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  var errEl = document.getElementById("fileErr");
+  errEl.innerHTML = "";
+  var name = file.name.toLowerCase();
+
+  if(name.endsWith(".csv")){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        var aoa = parseCSV(ev.target.result);
+        var rows = rowsFromAOA(aoa);
+        if(!rows.length){ errEl.innerHTML = '<div class="err">Dosyada okunabilir satır bulunamadı. Sütun başlıklarını kontrol edin.</div>'; return; }
+        state.rows = rows; state.isDemo = false; render();
+      }catch(err){ errEl.innerHTML = '<div class="err">CSV okunamadı: '+esc(err.message)+'</div>'; }
+    };
+    reader.readAsText(file, "utf-8");
+  } else {
+    if(typeof XLSX === "undefined"){
+      errEl.innerHTML = '<div class="err">Excel kütüphanesi yüklenemedi (bağlantı sorunu olabilir). Lütfen dosyayı .csv olarak kaydedip tekrar deneyin.</div>';
+      return;
+    }
+    var reader2 = new FileReader();
+    reader2.onload = function(ev){
+      try{
+        var data = new Uint8Array(ev.target.result);
+        var wb = XLSX.read(data, {type:"array"});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:""});
+        var rows = rowsFromAOA(aoa);
+        if(!rows.length){ errEl.innerHTML = '<div class="err">Dosyada okunabilir satır bulunamadı. Sütun başlıklarını kontrol edin.</div>'; return; }
+        state.rows = rows; state.isDemo = false; render();
+      }catch(err){ errEl.innerHTML = '<div class="err">Excel okunamadı: '+esc(err.message)+'</div>'; }
+    };
+    reader2.readAsArrayBuffer(file);
+  }
+});
+
+document.getElementById("addRowBtn").addEventListener("click", function(){
+  state.rows.push({isletme:"",dal:"",adres:"",tel:"",usta:"",ad:"",sinif:"",sube:"",no:"",aciklama:"",ogretmen:""});
+  state.isDemo = false;
+  render();
+});
+
+document.getElementById("clearBtn").addEventListener("click", function(){
+  if(!confirm("Tüm veriler silinsin mi? Bu işlem geri alınamaz.")) return;
+  state.rows = [];
+  state.isDemo = false;
+  render();
+});
+
+["fOkul","fBaslik","fDonem","fYil","fAciklamaBaslik","fMinRows"].forEach(function(id){
+  document.getElementById(id).addEventListener("input", renderPagesOnly);
+});
+
+document.getElementById("zoomRange").addEventListener("input", function(){
+  document.documentElement.style.setProperty("--preview-zoom", this.value);
+});
+document.documentElement.style.setProperty("--preview-zoom", "0.6");
+
+document.getElementById("printBtn").addEventListener("click", function(){
+  window.print();
+});
+
+/* ================= Restore saved header fields ================= */
+if(saved && saved.header){
+  ["fOkul","fBaslik","fDonem","fYil","fAciklamaBaslik"].forEach(function(id){
+    var key = id.replace(/^f/,"");
+    key = key.charAt(0).toLowerCase()+key.slice(1);
+    if(saved.header[key] !== undefined) document.getElementById(id).value = saved.header[key];
+  });
+  if(saved.header.minRows !== undefined) document.getElementById("fMinRows").value = saved.header.minRows;
+}
+
+/* ================= PWA: install prompt ================= */
+var deferredPrompt = null;
+var installBtn = document.getElementById("installBtn");
+window.addEventListener("beforeinstallprompt", function(e){
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = "block";
+});
+installBtn.addEventListener("click", function(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.finally(function(){
+    deferredPrompt = null;
+    installBtn.style.display = "none";
+  });
+});
+window.addEventListener("appinstalled", function(){
+  installBtn.style.display = "none";
+});
+(function(){
+  var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(isIOS && !isStandalone){
+    document.getElementById("iosHint").style.display = "block";
+  }
+})();
+
+/* ================= Service worker kaydı ================= */
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("service-worker.js").catch(function(){ /* offline destek olmadan da çalışır */ });
+  });
+}
+
+/* ================= Init ================= */
+render();
+
+})();
+</script>
+</body>
+</html>
