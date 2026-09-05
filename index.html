@@ -107,10 +107,17 @@ input,select{font-family:inherit;}
 .stat b{color:var(--text);}
 .err{background:#fee2e2;color:#991b1b;border-radius:6px;padding:8px 10px;font-size:12px;margin-top:8px;}
 :root[data-theme="dark"] .err,@media (prefers-color-scheme:dark){.err{background:#3b1616;color:#fca5a5;}}
-.isletme-list{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
-.isletme-row{display:flex;justify-content:space-between;gap:8px;padding:6px 9px;font-size:12px;border-bottom:1px solid var(--border);}
+.isletme-list{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+.isletme-row{display:flex;align-items:center;gap:8px;padding:6px 9px;font-size:12px;border-bottom:1px solid var(--border);}
 .isletme-row:last-child{border-bottom:none;}
+.isletme-row .nm{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .isletme-row .n{color:var(--text-dim);flex:0 0 auto;}
+.isletme-row .only-btn{flex:0 0 auto;font-size:10.5px;padding:2px 7px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;}
+.isletme-row .only-btn:hover{color:var(--text);border-color:var(--text-dim);}
+.isletme-row input[type=checkbox]{flex:0 0 auto;cursor:pointer;}
+.isletme-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;font-size:11.5px;}
+.isletme-toolbar a{color:var(--accent,#3b82f6);cursor:pointer;text-decoration:underline;}
+.print-select-hint{font-size:11px;color:var(--text-dim);margin-top:4px;}
 .zoomrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);}
 .zoomrow input[type=range]{flex:1;}
 .savebadge{font-size:11px;color:var(--text-dim);margin-top:6px;display:flex;align-items:center;gap:5px;}
@@ -210,6 +217,8 @@ table.form-table td.esaslar{
     page-break-after:always;overflow:hidden;
   }
   .page:last-child{page-break-after:auto;}
+  .page.page-excluded{display:none !important;}
+  .page.print-last{page-break-after:auto !important;}
   @page{size:A4 landscape;margin:2.54mm 11.68mm 2.54mm 9.91mm;}
 }
 </style>
@@ -270,7 +279,12 @@ table.form-table td.esaslar{
 
     <div class="section">
       <h2>4. İşletmeler <span id="isletmeCount"></span></h2>
+      <div class="isletme-toolbar">
+        <span id="printSelSummary" class="print-select-hint"></span>
+        <span><a id="selectAllBtn">Tümünü seç</a> · <a id="selectNoneBtn">Tümünü kaldır</a></span>
+      </div>
       <div class="isletme-list" id="isletmeList"></div>
+      <div class="print-select-hint">İşaretli işletmeler yazdırılır/PDF'e aktarılır. Bir işletmenin yanındaki "Sadece bunu yazdır" ile tek sayfa yazdırabilirsiniz.</div>
     </div>
 
     <div class="section">
@@ -400,7 +414,8 @@ try{ saved = loadSaved(); }catch(e){}
 /* ================= State ================= */
 var state = {
   rows: (saved && saved.rows && saved.rows.length) ? saved.rows : DEMO_ROWS.map(function(r){return Object.assign({},r);}),
-  isDemo: saved ? !!saved.isDemo : true
+  isDemo: saved ? !!saved.isDemo : true,
+  printExcluded: {} // isletme adı -> true demek "yazdırma listesinden çıkarıldı"
 };
 
 /* ================= Helpers ================= */
@@ -526,7 +541,7 @@ function buildPage(group, header, minRows){
   var totalRows = 17 + sr.n;
   var acikBaslik = esc(header.aciklamaBaslik || "Açıklama");
   return '' +
-  '<div class="page">' +
+  '<div class="page" data-isletme="'+esc(group.isletme)+'">' +
     '<div class="page-header">' +
       '<div class="l1">'+esc(header.okul)+'</div>' +
       '<div class="l2">'+esc(header.baslik)+' ( '+esc(header.donem)+' )</div>' +
@@ -697,11 +712,7 @@ function render(){
     root.innerHTML = groups.map(function(g){ return buildPage(g, header, minRows); }).join("");
   }
 
-  document.getElementById("isletmeCount").textContent = groups.length ? "("+groups.length+")" : "";
-  var listEl = document.getElementById("isletmeList");
-  listEl.innerHTML = groups.map(function(g){
-    return '<div class="isletme-row"><span>'+esc(g.isletme)+'</span><span class="n">'+g.students.length+' öğr.</span></div>';
-  }).join("") || '<div class="isletme-row"><span style="color:var(--text-dim)">İşletme yok</span></div>';
+  renderIsletmeList(groups);
 
   document.getElementById("toolbarInfo").textContent = state.isDemo
     ? "Örnek veriyle önizleme gösteriliyor. Kendi verinizi yükleyince bu sayfalar değişecek."
@@ -754,14 +765,108 @@ function renderPagesOnly(){
   root.innerHTML = groups.length
     ? groups.map(function(g){ return buildPage(g, header, minRows); }).join("")
     : '<div class="empty-state"><h3>Henüz veri yok</h3><p>Sol paneldeki alandan bir Excel veya CSV dosyası yükleyin.</p></div>';
-  document.getElementById("isletmeCount").textContent = groups.length ? "("+groups.length+")" : "";
-  var listEl = document.getElementById("isletmeList");
-  listEl.innerHTML = groups.map(function(g){
-    return '<div class="isletme-row"><span>'+esc(g.isletme)+'</span><span class="n">'+g.students.length+' öğr.</span></div>';
-  }).join("") || '<div class="isletme-row"><span style="color:var(--text-dim)">İşletme yok</span></div>';
+  renderIsletmeList(groups);
   document.getElementById("toolbarInfo").textContent =
     (groups.length+" işletme, "+state.rows.length+" öğrenci satırı — "+groups.length+" sayfa üretilecek.");
   saveState();
+}
+
+/* ================= İşletme listesi + yazdırma seçimi ================= */
+function renderIsletmeList(groups){
+  document.getElementById("isletmeCount").textContent = groups.length ? "("+groups.length+")" : "";
+  var listEl = document.getElementById("isletmeList");
+
+  // Artık var olmayan işletmeler için işaretlemeleri temizle
+  var validNames = {};
+  groups.forEach(function(g){ validNames[g.isletme] = true; });
+  Object.keys(state.printExcluded).forEach(function(k){
+    if(!validNames[k]) delete state.printExcluded[k];
+  });
+
+  listEl.innerHTML = groups.map(function(g, idx){
+    var checked = state.printExcluded[g.isletme] ? "" : "checked";
+    return '<div class="isletme-row">' +
+      '<input type="checkbox" class="isletme-chk" data-name="'+esc(g.isletme)+'" '+checked+'>' +
+      '<span class="nm" title="'+esc(g.isletme)+'">'+esc(g.isletme || "(İsimsiz işletme)")+'</span>' +
+      '<span class="n">'+g.students.length+' öğr.</span>' +
+      '<button type="button" class="only-btn" data-only="'+esc(g.isletme)+'">Sadece bunu yazdır</button>' +
+      '</div>';
+  }).join("") || '<div class="isletme-row"><span style="color:var(--text-dim)">İşletme yok</span></div>';
+
+  listEl.querySelectorAll(".isletme-chk").forEach(function(chk){
+    chk.addEventListener("change", function(){
+      var name = this.getAttribute("data-name");
+      if(this.checked){ delete state.printExcluded[name]; }
+      else { state.printExcluded[name] = true; }
+      applyPrintSelection(groups);
+      updatePrintSelSummary(groups);
+    });
+  });
+  listEl.querySelectorAll("[data-only]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      printOnlyIsletme(this.getAttribute("data-only"), groups);
+    });
+  });
+
+  updatePrintSelSummary(groups);
+  applyPrintSelection(groups);
+}
+
+function updatePrintSelSummary(groups){
+  var total = groups.length;
+  var excluded = Object.keys(state.printExcluded).filter(function(k){
+    return groups.some(function(g){ return g.isletme === k; });
+  }).length;
+  var willPrint = total - excluded;
+  var el = document.getElementById("printSelSummary");
+  if(el) el.textContent = total ? (willPrint+" / "+total+" işletme yazdırılacak") : "";
+}
+
+// Seçime göre .page elemanlarına print-time gizleme sınıfını uygular ve
+// yazdırılacak son sayfada doğru sayfa-sonu davranışını (boş sayfa çıkmasın) ayarlar.
+function applyPrintSelection(groups){
+  var pages = document.querySelectorAll("#pagesRoot .page");
+  var lastVisible = null;
+  pages.forEach(function(p){
+    var name = p.getAttribute("data-isletme") || "";
+    var excluded = !!state.printExcluded[name];
+    p.classList.toggle("page-excluded", excluded);
+    p.classList.remove("print-last");
+    if(!excluded) lastVisible = p;
+  });
+  if(lastVisible) lastVisible.classList.add("print-last");
+}
+
+function setAllPrintSelection(excludeAll, groups){
+  groups.forEach(function(g){
+    if(excludeAll) state.printExcluded[g.isletme] = true;
+    else delete state.printExcluded[g.isletme];
+  });
+  renderIsletmeList(groups);
+}
+
+document.getElementById("selectAllBtn").addEventListener("click", function(){
+  setAllPrintSelection(false, groupData(state.rows));
+});
+document.getElementById("selectNoneBtn").addEventListener("click", function(){
+  setAllPrintSelection(true, groupData(state.rows));
+});
+
+// Bir işletmenin sayfasını, diğer seçimleri bozmadan tek başına yazdırır.
+function printOnlyIsletme(name, groups){
+  var prevExcluded = state.printExcluded;
+  var temp = {};
+  groups.forEach(function(g){ if(g.isletme !== name) temp[g.isletme] = true; });
+  state.printExcluded = temp;
+  applyPrintSelection(groups);
+
+  function restore(){
+    state.printExcluded = prevExcluded;
+    applyPrintSelection(groups);
+    window.removeEventListener("afterprint", restore);
+  }
+  window.addEventListener("afterprint", restore);
+  setTimeout(function(){ window.print(); }, 30);
 }
 
 /* ================= File handling ================= */
